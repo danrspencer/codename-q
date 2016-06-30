@@ -1,0 +1,10 @@
+#!/bin/bash
+
+(cd ci_server && vagrant up)
+
+echo
+echo
+echo "Concourse server started"
+echo "Viewable on: 192.168.100.4:8080"
+
+open http://192.168.100.4:8080

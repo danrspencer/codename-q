@@ -1,0 +1,10 @@
+#!/bin/bash
+
+(cd dev_server && vagrant up)
+
+echo
+echo
+echo "Dev server started"
+echo "Viewable on: 127.0.0.1:????"
+
+open http://127.0.0.1:????

@@ -1,0 +1,1 @@
+{"virtualbox":{"/vagrant":{"mount_options":["dmode=777","fmode=777"],"guestpath":"/vagrant","hostpath":"/Users/dsp05/Sites/misc/codename-q/dev_tools/ci_server","disabled":false}}}

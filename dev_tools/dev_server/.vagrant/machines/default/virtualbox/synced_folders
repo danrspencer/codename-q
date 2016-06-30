@@ -1,0 +1,1 @@
+{"virtualbox":{"/home/vagrant/app":{"guestpath":"/home/vagrant/app","hostpath":"/Users/dsp05/Sites/misc/codename-q/app","disabled":false},"/vagrant":{"guestpath":"/vagrant","hostpath":"/Users/dsp05/Sites/misc/codename-q/dev_tools/dev_server","disabled":false}}}

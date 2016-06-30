@@ -1,0 +1,3 @@
+#!/bin/bash
+
+(cd ci_server && vagrant box update --box concourse/lite)

@@ -1,0 +1,12 @@
+jobs:
+
+- name: update-ci
+  public: true
+  plan:
+
+resources:
+- name: git
+  type: git
+  source:
+    uri: git@github.com:danrspencer/codename-q.git
+    branch: master
