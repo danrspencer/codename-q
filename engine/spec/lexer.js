@@ -8,7 +8,37 @@ const { set, view } = require('ramda');
 const { lexer, lexBase, getQuestionLens } = require('../src/lexer.js');
 
 describe('lexer', () => {
-    
+
+    it('parses a question title', () => {
+        const question = 'S1. Are you?';
+
+        expect(lexer(question)).to.deep.equal({
+            questions: [
+                {
+                    id: 'S1',
+                    text: 'Are you?'
+                }
+            ]
+        });
+    });
+
+    it('parses a question with a type', () => {
+        const question =
+            'S1. Are you?\n' +
+            'SINGLE CODE\n';
+
+        expect(lexer(question)).to.deep.equal({
+            questions: [
+                {
+                    id: 'S1',
+                    text: 'Are you?',
+                    type: 'SINGLE CODE'
+                }
+            ]
+        });
+    });
+
+
     it('parses a simple question into an object', () => {
         const question =
             'S1. Are you?\n' +
@@ -31,13 +61,15 @@ describe('lexer', () => {
         });
     });
 
-    it('returns an empty object when there is no question', () => {
+    it('returns an empty array when are no questions', () => {
         const nonQuestion =
             'SINGLE CODE\n' +
             '  1. Male\n' +
             '  2. Female\n';
 
-        expect(lexer(nonQuestion)).to.deep.equal({});
+        expect(lexer(nonQuestion)).to.deep.equal({
+            questions: []
+        });
     });
 
     it('parses a with more than 2 answers', () => {
@@ -105,9 +137,10 @@ describe('lexer', () => {
 
 describe('lexBase', () => {
 
-    it('updates the questions via the lens', () => {
-        const line = 'S1. Are you?';
-        const lexer = {
+    let lexer;
+
+    beforeEach(() => {
+        lexer = {
             data: {
                 questions: []
             },
@@ -116,19 +149,36 @@ describe('lexBase', () => {
             ],
             lensStack: [
             ]
-        };
+        }
+    });
 
+
+    it('adds a question', () => {
+        const line = 'S1. Are you?';
         const result = lexBase(lexer, line);
 
         expect(result.data).to.deep.equal({
             questions: [
-                {
-                    id: 'S1',
-                    text: 'Are you?'
-                }
+                { id: 'S1', text: 'Are you?' }
             ]
         });
     });
+
+    it('adds another question', () => {
+        lexer.data.questions.push({ id: 'S1', text: 'Are you?' });
+
+        const line = 'S2. Another question?';
+        const result = lexBase(lexer, line);
+
+        expect(result.data).to.deep.equal({
+            questions: [
+                { id: 'S1', text: 'Are you?'},
+                { id: 'S2', text: 'Another question?' }
+            ]
+        });
+    });
+
+    it('returns the correct processor');
 });
 
 describe('getQuestionLens', () => {
@@ -160,6 +210,16 @@ describe('getQuestionLens', () => {
         expect(result.questions[0]).to.deep.equal({
             id: 'q1',
             title: 'text'
+        });
+    });
+
+    it('updates nested arrays', () => {
+        data.questions[0].answers = ['male'];
+        const result = set(getQuestionLens(0), { answers: ['female'] }, data);
+
+        expect(result.questions[0]).to.deep.equal({
+            id: 'q1',
+            answers: ['male', 'female']
         });
     });
 

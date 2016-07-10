@@ -3,19 +3,19 @@
 const debugLogger = require('debug')('lexer');
 const debug = (desc) => (value) => { debugLogger(desc + ": %s", JSON.stringify(value, null, ' ')); return value; };
 
-const { adjust, assoc, compose, last, lens, lensPath, lensIndex, lensProp, match, merge, over, prop, reduce, set, view } = require('ramda');
+const { adjust, append, assoc, compose, concat, init, last, lens, lensPath, lensIndex, lensProp, match, merge, over, prop, reduce, set, view } = require('ramda');
 const { deepMerge } = require('./utils.js');
 
 const splitOnNewLine = (text) => text.split(/\n/);
 
-type lexer = { data: Object, lexStack: Array<Function>, lensStack: Array<Object> }
+type Lexer = { data: Object, lexStack: Array<Function> }
 
 // Lenses
-const getQuestionLens = (index) => lens(
+const getQuestionLens = (index: number) => lens(
         compose((questions) => questions[index], prop('questions')),
         (update, data) => assoc(
             'questions',
-            adjust((question) => merge(question, update), index, data.questions),
+            adjust((question) => deepMerge(question, update), index, data.questions),
             data
         )
     );
@@ -23,44 +23,39 @@ const getQuestionLens = (index) => lens(
 // Base
 const questionStartRegex = /([A-Z][0-9])\. (.*)/;
 const findQuestion = (text) => match(questionStartRegex, text);
-const processQuestion = (lexer, lineResult) => {
-    if (lineResult.length <= 2) {
-        return lexer;
-    }
-
-    lexer.data.questions.push({ id: lineResult[1], text: lineResult[2] });
-
-    return {
-        data: lexer.data,
-        processor: typeProcessor,
-        focus: getQuestionLens(lexer.data.questions.length - 1)
-    }
-};
+const processQuestion = ({data, lexStack}, lineResult) => lineResult.length < 3
+    ? {data, lexStack}
+    : {
+        data: deepMerge(data, { questions: [ { id: lineResult[1], text: lineResult[2] } ] }),
+        lexStack: append(typeLex(getQuestionLens(data.questions.length)), lexStack)
+    };
 const lexBase = compose(
     ({lexer, lineResult}) => processQuestion(lexer, lineResult),
-    (lexer, line) => ({ lexer: lexer, lineResult: findQuestion(line) })
+    (lexer, line) => ({ lexer, lineResult: findQuestion(line) })
 );
 
 // Type
-const typeProcessor = ({ data, processor, focus }, line) => ({
-    data: set(focus, { type: line }, data),
-    processor: answerProcessor,
-    focus
+const typeLex = (lens) => ({ data, lexStack }, line) => ({
+    data: set(lens, { type: line }, data),
+    lexStack: append(answerLex(lens) ,init(lexStack))
 });
+
 
 // Answers
 const answerRegex = /\s+[0-9]\. (.*)/;
-const findAnswer = (text) => match(answerRegex, text);
-const answerProcessor = compose(
-    ({ lexer, lineResult }) => lineResult.length > 1
-        ? assoc('data', set(lexer.focus, { answers: [ lineResult[1] ] } , lexer.data), lexer)
-        : assoc('processor', lexBase, lexer),
-    (lexer, line) => ({ lexer: lexer, lineResult: findAnswer(line) })
+const findAnswer = text => match(answerRegex, text);
+const processAnswer = ({data, lexStack}, lineResult, lens) => lineResult.length > 1
+    ? { data: set(lens, { answers: [ lineResult[1] ] } , data), lexStack }
+    : { data, lexStack: init(lexStack) };
+const answerLex = lens => compose(
+    ({lexer, lineResult}) => processAnswer(lexer, lineResult, lens),
+    (lexer, line) => ({ lexer, lineResult: findAnswer(line) })
 );
 
+// Main processing loop
 const processLines = (text) => reduce(
-    (lexer, line) => lexer.processor(lexer, line),
-    { processor: lexBase, data: { questions: [{}] } },
+    (lexer, line) => last(lexer.lexStack)(lexer, line),
+    { lexStack: [ lexBase ], data: { questions: [] } },
     splitOnNewLine(text)
 );
 
